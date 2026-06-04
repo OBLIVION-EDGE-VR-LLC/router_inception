@@ -1,0 +1,162 @@
+@startuml
+
+title Security Flow Analysis\nZero Trust Multi-Hop Network
+
+actor "Client Device" as client
+participant "Primary Router\n(Entry Point)" as primary
+participant "Russia Hop" as russia
+participant "Canada Hop" as canada
+participant "Taiwan Hop" as taiwan
+participant "Australia Hop" as australia
+participant "Exit Router" as exit
+database "TPM Hardware" as tpm
+database "Certificate Store" as certs
+database "Policy Engine" as policy
+
+== Initial Authentication ==
+
+client -> primary : Connection Request
+activate primary
+
+primary -> tpm : Verify Boot Integrity
+tpm -> primary : Attestation Signature
+
+primary -> certs : Validate Client Certificate
+certs -> primary : Certificate Chain OK
+
+primary -> policy : Check ZTNA Policy
+policy -> primary : Access Granted
+
+note over primary, tpm
+  **Boot Verification:**
+  1. Secure boot validates signed firmware
+  2. TPM provides hardware attestation
+  3. Kernel modules integrity checked
+  4. ZTNA engine starts only if verified
+end note
+
+== Multi-Hop Encryption Setup ==
+
+primary -> russia : Establish WireGuard Tunnel
+activate russia
+russia -> russia : Generate Ephemeral Keys
+russia -> russia : Configure Geographic NAT\n(5.101.x.x - Russia)
+
+russia -> canada : Establish WireGuard Tunnel
+activate canada
+canada -> canada : Generate Ephemeral Keys
+canada -> canada : Configure Geographic NAT\n(174.95.x.x - Canada)
+
+canada -> taiwan : Establish WireGuard Tunnel
+activate taiwan
+taiwan -> taiwan : Generate Ephemeral Keys
+taiwan -> taiwan : Configure Geographic NAT\n(1.160.x.x - Taiwan)
+
+taiwan -> australia : Establish WireGuard Tunnel
+activate australia
+australia -> australia : Generate Ephemeral Keys
+australia -> australia : Configure Geographic NAT\n(1.128.x.x - Australia)
+
+australia -> exit : Establish WireGuard Tunnel
+activate exit
+exit -> exit : Configure SOHO Gateway
+exit -> exit : Apply Firewall Rules
+
+== Traffic Flow with Security Validation ==
+
+client -> primary : Encrypted Data Packet
+primary -> primary : Decrypt with Client Key
+primary -> primary : Log Packet (Forensic)
+primary -> primary : Re-encrypt for Russia Hop
+
+primary -> russia : [WG Encrypted] Data
+russia -> russia : Decrypt & Validate
+russia -> russia : Apply Russia GeoIP Headers
+russia -> russia : Log Packet (Forensic)
+russia -> russia : Re-encrypt for Canada Hop
+
+russia -> canada : [WG Encrypted] Data
+canada -> canada : Decrypt & Validate
+canada -> canada : Apply Canada GeoIP Headers
+canada -> canada : Log Packet (Forensic)
+canada -> canada : Re-encrypt for Taiwan Hop
+
+canada -> taiwan : [WG Encrypted] Data
+taiwan -> taiwan : Decrypt & Validate
+taiwan -> taiwan : Apply Taiwan GeoIP Headers
+taiwan -> taiwan : Log Packet (Forensic)
+taiwan -> taiwan : Re-encrypt for Australia Hop
+
+taiwan -> australia : [WG Encrypted] Data
+australia -> australia : Decrypt & Validate
+australia -> australia : Apply Australia GeoIP Headers
+australia -> australia : Log Packet (Forensic)
+australia -> australia : Re-encrypt for Exit
+
+australia -> exit : [WG Encrypted] Data
+exit -> exit : Final Decrypt & Validate
+exit -> exit : Apply SOHO NAT Rules
+exit -> exit : Forward to Destination
+
+== Security Monitoring ==
+
+loop Continuous Monitoring
+    primary -> primary : Run oblivion_suspect_monitoring
+    russia -> russia : Pattern Detection & Logging
+    canada -> canada : Traffic Analysis
+    taiwan -> taiwan : Anomaly Detection
+    australia -> australia : Performance Monitoring
+    exit -> exit : Firewall Logs & Alerts
+end
+
+== Security Events ==
+
+alt Suspicious Traffic Detected
+    russia -> policy : Report Anomaly
+    policy -> primary : Update Security Rules
+    primary -> russia : Apply New Filters
+    primary -> canada : Propagate Security Rules
+    primary -> taiwan : Propagate Security Rules
+    primary -> australia : Propagate Security Rules
+    primary -> exit : Update Firewall Rules
+else Normal Operation
+    note over primary, exit : Continue normal traffic flow with monitoring
+end
+
+== Key Rotation ==
+
+loop Every 24 Hours
+    primary -> russia : Rotate WireGuard Keys
+    russia -> canada : Rotate WireGuard Keys
+    canada -> taiwan : Rotate WireGuard Keys
+    taiwan -> australia : Rotate WireGuard Keys
+    australia -> exit : Rotate WireGuard Keys
+
+    note over primary, exit
+      **Key Rotation Benefits:**
+      • Forward secrecy protection
+      • Limits impact of key compromise
+      • Meets security best practices
+      • Automated without service interruption
+    end note
+end
+
+deactivate exit
+deactivate australia
+deactivate taiwan
+deactivate canada
+deactivate russia
+deactivate primary
+
+note over client, exit
+  **Security Guarantees:**
+  ✓ Zero Trust - Every hop validates traffic
+  ✓ End-to-End Encryption - Multiple WireGuard layers
+  ✓ Hardware Attestation - TPM-backed verification
+  ✓ Geographic Obfuscation - Multi-country routing
+  ✓ Packet Forensics - Full traffic logging capability
+  ✓ Automatic Key Rotation - Regular security updates
+  ✓ Anomaly Detection - AI-powered threat analysis
+end note
+
+@enduml

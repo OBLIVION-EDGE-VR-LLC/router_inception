@@ -1,0 +1,302 @@
+version: '3.8'
+
+networks:
+  geo-labyrinth:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+  mgmt-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+          gateway: 172.21.0.1
+
+volumes:
+  oblivion-logs:
+  router-configs:
+  monitoring-data:
+  tpm-data:
+
+services:
+  # Primary Entry Router
+  oblivion-primary:
+    build:
+      context: ../../OblivionEdge-OblivionEdge_Dev
+      dockerfile: Dockerfile.router
+    container_name: oblivion-primary
+    hostname: primary-router
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun
+    networks:
+      geo-labyrinth:
+        ipv4_address: 172.20.0.10
+      mgmt-network:
+        ipv4_address: 172.21.0.10
+    volumes:
+      - ./router_configs/primary:/etc/oblivion:ro
+      - oblivion-logs:/var/log/oblivion
+      - tpm-data:/dev/tpm
+    environment:
+      - ROUTER_ROLE=primary
+      - GEOGRAPHIC_LOCATION=entry
+      - WIREGUARD_PORT=51820
+      - ZTNA_ENABLED=true
+      - TPM_ENABLED=true
+      - NEXT_HOP=172.20.0.20
+    ports:
+      - "51820:51820/udp"  # WireGuard
+      - "8443:8443"        # Admin Interface
+    depends_on:
+      - oblivion-monitor
+    restart: unless-stopped
+
+  # Russia Geographic Hop
+  oblivion-russia:
+    build:
+      context: ../../OblivionEdge-OblivionEdge_Dev
+      dockerfile: Dockerfile.router
+    container_name: oblivion-russia
+    hostname: russia-hop
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    networks:
+      geo-labyrinth:
+        ipv4_address: 172.20.0.20
+      mgmt-network:
+        ipv4_address: 172.21.0.20
+    volumes:
+      - ./router_configs/russia:/etc/oblivion:ro
+      - oblivion-logs:/var/log/oblivion
+    environment:
+      - ROUTER_ROLE=hop
+      - GEOGRAPHIC_LOCATION=russia
+      - SIMULATED_ASN=AS12389
+      - SIMULATED_IP_RANGE=5.101.0.0/16
+      - SIMULATED_COUNTRY=RU
+      - SIMULATED_CITY=Moscow
+      - WIREGUARD_PORT=51821
+      - PREV_HOP=172.20.0.10
+      - NEXT_HOP=172.20.0.30
+    ports:
+      - "51821:51821/udp"
+    restart: unless-stopped
+
+  # Canada Geographic Hop
+  oblivion-canada:
+    build:
+      context: ../../OblivionEdge-OblivionEdge_Dev
+      dockerfile: Dockerfile.router
+    container_name: oblivion-canada
+    hostname: canada-hop
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    networks:
+      geo-labyrinth:
+        ipv4_address: 172.20.0.30
+      mgmt-network:
+        ipv4_address: 172.21.0.30
+    volumes:
+      - ./router_configs/canada:/etc/oblivion:ro
+      - oblivion-logs:/var/log/oblivion
+    environment:
+      - ROUTER_ROLE=hop
+      - GEOGRAPHIC_LOCATION=canada
+      - SIMULATED_ASN=AS812
+      - SIMULATED_IP_RANGE=174.95.0.0/16
+      - SIMULATED_COUNTRY=CA
+      - SIMULATED_CITY=Toronto
+      - WIREGUARD_PORT=51822
+      - PREV_HOP=172.20.0.20
+      - NEXT_HOP=172.20.0.40
+    ports:
+      - "51822:51822/udp"
+    restart: unless-stopped
+
+  # Taiwan Geographic Hop
+  oblivion-taiwan:
+    build:
+      context: ../../OblivionEdge-OblivionEdge_Dev
+      dockerfile: Dockerfile.router
+    container_name: oblivion-taiwan
+    hostname: taiwan-hop
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    networks:
+      geo-labyrinth:
+        ipv4_address: 172.20.0.40
+      mgmt-network:
+        ipv4_address: 172.21.0.40
+    volumes:
+      - ./router_configs/taiwan:/etc/oblivion:ro
+      - oblivion-logs:/var/log/oblivion
+    environment:
+      - ROUTER_ROLE=hop
+      - GEOGRAPHIC_LOCATION=taiwan
+      - SIMULATED_ASN=AS9924
+      - SIMULATED_IP_RANGE=1.160.0.0/11
+      - SIMULATED_COUNTRY=TW
+      - SIMULATED_CITY=Taipei
+      - WIREGUARD_PORT=51823
+      - PREV_HOP=172.20.0.30
+      - NEXT_HOP=172.20.0.50
+    ports:
+      - "51823:51823/udp"
+    restart: unless-stopped
+
+  # Australia Geographic Hop
+  oblivion-australia:
+    build:
+      context: ../../OblivionEdge-OblivionEdge_Dev
+      dockerfile: Dockerfile.router
+    container_name: oblivion-australia
+    hostname: australia-hop
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    networks:
+      geo-labyrinth:
+        ipv4_address: 172.20.0.50
+      mgmt-network:
+        ipv4_address: 172.21.0.50
+    volumes:
+      - ./router_configs/australia:/etc/oblivion:ro
+      - oblivion-logs:/var/log/oblivion
+    environment:
+      - ROUTER_ROLE=hop
+      - GEOGRAPHIC_LOCATION=australia
+      - SIMULATED_ASN=AS1221
+      - SIMULATED_IP_RANGE=1.128.0.0/11
+      - SIMULATED_COUNTRY=AU
+      - SIMULATED_CITY=Sydney
+      - WIREGUARD_PORT=51824
+      - PREV_HOP=172.20.0.40
+      - NEXT_HOP=172.20.0.60
+    ports:
+      - "51824:51824/udp"
+    restart: unless-stopped
+
+  # Exit Router (SOHO Gateway)
+  oblivion-exit:
+    build:
+      context: ../../OblivionEdge-OblivionEdge_Dev
+      dockerfile: Dockerfile.router
+    container_name: oblivion-exit
+    hostname: exit-router
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    networks:
+      geo-labyrinth:
+        ipv4_address: 172.20.0.60
+      mgmt-network:
+        ipv4_address: 172.21.0.60
+    volumes:
+      - ./router_configs/exit:/etc/oblivion:ro
+      - oblivion-logs:/var/log/oblivion
+    environment:
+      - ROUTER_ROLE=exit
+      - GEOGRAPHIC_LOCATION=exit
+      - SOHO_NETWORK=192.168.1.0/24
+      - WIREGUARD_PORT=51825
+      - PREV_HOP=172.20.0.50
+      - NAT_ENABLED=true
+      - FIREWALL_ENABLED=true
+    ports:
+      - "51825:51825/udp"
+      - "80:80"           # HTTP Redirect
+      - "443:443"         # HTTPS
+      - "53:53/udp"       # DNS
+    restart: unless-stopped
+
+  # Monitoring and Management
+  oblivion-monitor:
+    build:
+      context: ../../OblivionEdge-OblivionEdge_Dev
+      dockerfile: Dockerfile.monitor
+    container_name: oblivion-monitor
+    hostname: monitor-server
+    networks:
+      mgmt-network:
+        ipv4_address: 172.21.0.100
+    volumes:
+      - ./router_configs/monitor:/etc/oblivion:ro
+      - monitoring-data:/var/lib/monitoring
+      - oblivion-logs:/var/log/oblivion:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - MONITOR_ROLE=central
+      - GRAFANA_ENABLED=true
+      - PROMETHEUS_ENABLED=true
+      - PACKET_ANALYSIS_ENABLED=true
+      - CONTAINER_MGMT_ENABLED=true
+    ports:
+      - "3000:3000"       # Grafana Dashboard
+      - "9090:9090"       # Prometheus
+      - "8080:8080"       # Monitoring API
+    restart: unless-stopped
+
+  # Backup and Failover (Optional)
+  oblivion-backup:
+    build:
+      context: ../../OblivionEdge-OblivionEdge_Dev
+      dockerfile: Dockerfile.router
+    container_name: oblivion-backup
+    hostname: backup-router
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    networks:
+      geo-labyrinth:
+        ipv4_address: 172.20.0.70
+      mgmt-network:
+        ipv4_address: 172.21.0.70
+    volumes:
+      - ./router_configs/backup:/etc/oblivion:ro
+      - oblivion-logs:/var/log/oblivion
+    environment:
+      - ROUTER_ROLE=backup
+      - GEOGRAPHIC_LOCATION=backup
+      - FAILOVER_ENABLED=true
+      - HEALTH_CHECK_INTERVAL=30
+    profiles:
+      - backup
+    restart: unless-stopped
+
+# Health checks
+x-healthcheck: &healthcheck
+  healthcheck:
+    test: ["CMD", "/usr/bin/oblivion_admin_cli", "status"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 60s
+
+# Apply healthcheck to all router services
+services:
+  oblivion-primary:
+    <<: *healthcheck
+  oblivion-russia:
+    <<: *healthcheck
+  oblivion-canada:
+    <<: *healthcheck
+  oblivion-taiwan:
+    <<: *healthcheck
+  oblivion-australia:
+    <<: *healthcheck
+  oblivion-exit:
+    <<: *healthcheck

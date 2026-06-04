@@ -1,0 +1,66 @@
+@startuml
+
+title Geographic IP Hopping - Traffic Flow Analysis
+
+participant "Client Device" as client
+participant "Primary Router\n(Entry Point)" as primary
+participant "Russia Hop\n(Container)" as russia
+participant "Canada Hop\n(Container)" as canada
+participant "Taiwan Hop\n(Container)" as taiwan
+participant "Australia Hop\n(Container)" as australia
+participant "Exit Router\n(SOHO Gateway)" as exit
+participant "External Service\n(Destination)" as external
+
+== Initial Connection ==
+client -> primary : Connect Request\n(Real IP)
+primary -> primary : ZTNA Authentication\nTPM Attestation
+
+== Geographic Hop 1: Russia ==
+primary -> russia : WireGuard Tunnel\nEncrypted Payload
+note right of russia : Source IP appears as:\n5.101.142.37 (Moscow)\nAS12389 ROSTELECOM
+
+== Geographic Hop 2: Canada ==
+russia -> canada : Re-encrypted Payload\nNew WireGuard Tunnel
+note right of canada : Source IP appears as:\n174.95.68.145 (Toronto)\nAS812 ROGERS
+
+== Geographic Hop 3: Taiwan ==
+canada -> taiwan : Re-encrypted Payload\nNew WireGuard Tunnel
+note right of taiwan : Source IP appears as:\n1.160.92.201 (Taipei)\nAS9924 CHUNGHWA
+
+== Geographic Hop 4: Australia ==
+taiwan -> australia : Re-encrypted Payload\nNew WireGuard Tunnel
+note right of australia : Source IP appears as:\n1.128.156.73 (Sydney)\nAS1221 TELSTRA
+
+== Exit to SOHO Network ==
+australia -> exit : Final Encrypted Payload
+exit -> exit : Decrypt & Route\nNAT Translation
+exit -> external : Request to External Service\n(Appears from Australia)
+
+== Response Path ==
+external -> exit : Response Data
+exit -> australia : Encrypt & Route Back
+australia -> taiwan : Re-encrypt & Forward
+taiwan -> canada : Re-encrypt & Forward
+canada -> russia : Re-encrypt & Forward
+russia -> primary : Re-encrypt & Forward
+primary -> client : Decrypt & Deliver
+
+note over client, external
+  **Security Benefits:**
+  • True client IP never exposed
+  • Traffic appears to originate from Australia
+  • Multiple encryption layers protect data
+  • Geographic diversity confuses traffic analysis
+  • Each hop provides independent security validation
+end note
+
+note over primary, exit
+  **Technical Implementation:**
+  • WireGuard tunnels between each hop
+  • NAT translation at each geographic point
+  • Route table manipulation via OblivionEdge modules
+  • Packet monitoring for forensic analysis
+  • Automatic failover to backup routes
+end note
+
+@enduml

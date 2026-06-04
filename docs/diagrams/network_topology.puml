@@ -1,0 +1,130 @@
+@startuml
+
+title Secure Geographic Router Labyrinth\nMulti-Hop Network Topology
+
+' Define network zones
+package "External Network" as ext {
+  cloud "Internet" as internet
+  node "ISP Modem" as modem
+}
+
+package "Geographic Router Labyrinth" as labyrinth {
+
+  ' Primary Entry Router
+  node "Primary Router\n(OblivionEdge)" as primary {
+    interface "eth0" as primary_wan
+    interface "wlan0" as primary_wifi
+    interface "veth1" as primary_hop1
+    component "ZTNA Engine" as primary_ztna
+    component "TPM (SLB9670)" as primary_tpm
+    component "WireGuard VPN" as primary_wg
+  }
+
+  ' Geographic Hop Containers
+  node "Russia Hop\n(Container 1)" as russia {
+    interface "veth1" as russia_in
+    interface "veth2" as russia_out
+    component "AS12389\nROSTELECOM" as russia_asn
+    component "5.101.0.0/16" as russia_ip
+    component "WireGuard Tunnel" as russia_wg
+  }
+
+  node "Canada Hop\n(Container 2)" as canada {
+    interface "veth2" as canada_in
+    interface "veth3" as canada_out
+    component "AS812\nROGERS" as canada_asn
+    component "174.95.0.0/16" as canada_ip
+    component "WireGuard Tunnel" as canada_wg
+  }
+
+  node "Taiwan Hop\n(Container 3)" as taiwan {
+    interface "veth3" as taiwan_in
+    interface "veth4" as taiwan_out
+    component "AS9924\nCHUNGHWA" as taiwan_asn
+    component "1.160.0.0/11" as taiwan_ip
+    component "WireGuard Tunnel" as taiwan_wg
+  }
+
+  node "Australia Hop\n(Container 4)" as australia {
+    interface "veth4" as australia_in
+    interface "veth5" as australia_out
+    component "AS1221\nTELSTRA" as australia_asn
+    component "1.128.0.0/11" as australia_ip
+    component "WireGuard Tunnel" as australia_wg
+  }
+
+  ' Exit Router
+  node "Exit Router\n(OblivionEdge)" as exit {
+    interface "veth5" as exit_in
+    interface "eth1" as exit_lan
+    component "ZTNA Engine" as exit_ztna
+    component "Firewall" as exit_fw
+    component "NAT Gateway" as exit_nat
+  }
+}
+
+package "SOHO Network" as soho {
+  node "Switch/AP" as switch
+  node "Workstation" as workstation
+  node "Laptop" as laptop
+  node "Mobile Device" as mobile
+}
+
+package "Management" as mgmt {
+  node "Monitoring Server" as monitor {
+    component "oblivion_suspect_monitoring" as suspect_mon
+    component "Admin Dashboard" as dashboard
+    component "Route Manager" as route_mgr
+  }
+}
+
+' Network connections
+internet --> modem
+modem --> primary_wan
+
+primary_hop1 --> russia_in
+russia_out --> canada_in
+canada_out --> taiwan_in
+taiwan_out --> australia_in
+australia_out --> exit_in
+
+exit_lan --> switch
+switch --> workstation
+switch --> laptop
+switch --> mobile
+
+' Management connections (dashed)
+monitor ..> primary : SSH/API
+monitor ..> russia : Docker API
+monitor ..> canada : Docker API
+monitor ..> taiwan : Docker API
+monitor ..> australia : Docker API
+monitor ..> exit : SSH/API
+
+' Encryption tunnels (thick lines)
+primary_wg ==> russia_wg : WireGuard
+russia_wg ==> canada_wg : WireGuard
+canada_wg ==> taiwan_wg : WireGuard
+taiwan_wg ==> australia_wg : WireGuard
+australia_wg ==> exit : WireGuard
+
+note top of labyrinth
+  Traffic Flow:
+  1. Client connects to Primary Router
+  2. Encrypted through Russia (5.101.x.x)
+  3. Re-encrypted through Canada (174.95.x.x)
+  4. Re-encrypted through Taiwan (1.160.x.x)
+  5. Re-encrypted through Australia (1.128.x.x)
+  6. Exits to SOHO network
+end note
+
+note bottom of mgmt
+  Management Features:
+  - Real-time traffic monitoring
+  - Geographic hop status
+  - Route table management
+  - Security event logging
+  - Performance metrics
+end note
+
+@enduml

@@ -1,0 +1,156 @@
+@startuml
+
+title OblivionEdge Container Architecture\nGeographic Router Emulation System
+
+' Host system
+node "Host System (Dedicated Box)" as host {
+  component "Docker Engine" as docker
+  component "Network Manager" as netmgr
+  component "Host Kernel" as kernel
+
+  ' Physical interfaces
+  interface "eth0 (WAN)" as host_wan
+  interface "eth1 (LAN)" as host_lan
+  interface "eth2 (MGMT)" as host_mgmt
+}
+
+' Container network infrastructure
+cloud "Docker Networks" as networks {
+  node "geo-labyrinth" as geo_net {
+    component "Bridge Network\n172.20.0.0/16" as bridge
+  }
+  node "mgmt-network" as mgmt_net {
+    component "Management Network\n172.21.0.0/16" as mgmt_bridge
+  }
+}
+
+' Primary router container
+node "oblivion-primary" as primary_container {
+  component "OblivionEdge OS" as primary_os
+  component "ZTNA Engine" as primary_ztna
+  component "WireGuard Server" as primary_wg
+  component "Admin CLI" as primary_cli
+  component "TPM Emulation" as primary_tpm
+
+  interface "eth0\n172.20.0.10" as primary_ext
+  interface "wg0\n10.0.1.1/24" as primary_wg_if
+}
+
+' Geographic hop containers
+node "oblivion-russia" as russia_container {
+  component "OblivionEdge Core" as russia_os
+  component "Route Module" as russia_route
+  component "GeoIP Simulator" as russia_geo
+  component "WireGuard Client/Server" as russia_wg
+
+  interface "eth0\n172.20.0.20" as russia_eth
+  interface "wg0\n10.0.2.1/24" as russia_wg_if
+
+  note right : Simulated Location:\nMoscow, Russia\nAS12389 - 5.101.0.0/16
+}
+
+node "oblivion-canada" as canada_container {
+  component "OblivionEdge Core" as canada_os
+  component "Route Module" as canada_route
+  component "GeoIP Simulator" as canada_geo
+  component "WireGuard Client/Server" as canada_wg
+
+  interface "eth0\n172.20.0.30" as canada_eth
+  interface "wg0\n10.0.3.1/24" as canada_wg_if
+
+  note right : Simulated Location:\nToronto, Canada\nAS812 - 174.95.0.0/16
+}
+
+node "oblivion-taiwan" as taiwan_container {
+  component "OblivionEdge Core" as taiwan_os
+  component "Route Module" as taiwan_route
+  component "GeoIP Simulator" as taiwan_geo
+  component "WireGuard Client/Server" as taiwan_wg
+
+  interface "eth0\n172.20.0.40" as taiwan_eth
+  interface "wg0\n10.0.4.1/24" as taiwan_wg_if
+
+  note right : Simulated Location:\nTaipei, Taiwan\nAS9924 - 1.160.0.0/11
+}
+
+node "oblivion-australia" as australia_container {
+  component "OblivionEdge Core" as australia_os
+  component "Route Module" as australia_route
+  component "GeoIP Simulator" as australia_geo
+  component "WireGuard Client/Server" as australia_wg
+
+  interface "eth0\n172.20.0.50" as australia_eth
+  interface "wg0\n10.0.5.1/24" as australia_wg_if
+
+  note right : Simulated Location:\nSydney, Australia\nAS1221 - 1.128.0.0/11
+}
+
+' Exit router container
+node "oblivion-exit" as exit_container {
+  component "OblivionEdge OS" as exit_os
+  component "NAT Gateway" as exit_nat
+  component "Firewall Engine" as exit_fw
+  component "WireGuard Client" as exit_wg
+  component "SOHO Interface" as exit_soho
+
+  interface "eth0\n172.20.0.60" as exit_int
+  interface "eth1\n192.168.1.1/24" as exit_ext
+}
+
+' Management container
+node "oblivion-monitor" as monitor_container {
+  component "Monitoring Dashboard" as monitor_dash
+  component "Packet Analysis" as monitor_packets
+  component "Route Manager" as monitor_routes
+  component "Container Controller" as monitor_ctrl
+
+  interface "eth0\n172.21.0.100" as monitor_int
+}
+
+' Network connections
+host_wan --> bridge
+bridge --> primary_ext
+bridge --> russia_eth
+bridge --> canada_eth
+bridge --> taiwan_eth
+bridge --> australia_eth
+bridge --> exit_int
+
+host_mgmt --> mgmt_bridge
+mgmt_bridge --> monitor_int
+
+exit_ext --> host_lan
+
+' WireGuard tunnels
+primary_wg_if ==> russia_wg_if : Tunnel 1
+russia_wg_if ==> canada_wg_if : Tunnel 2
+canada_wg_if ==> taiwan_wg_if : Tunnel 3
+taiwan_wg_if ==> australia_wg_if : Tunnel 4
+australia_wg_if ==> exit_wg : Tunnel 5
+
+' Management connections
+monitor_ctrl ..> primary_container : Docker API
+monitor_ctrl ..> russia_container : Docker API
+monitor_ctrl ..> canada_container : Docker API
+monitor_ctrl ..> taiwan_container : Docker API
+monitor_ctrl ..> australia_container : Docker API
+monitor_ctrl ..> exit_container : Docker API
+
+note top of host
+  **Host Requirements:**
+  • Ubuntu 22.04+ with Docker 24+
+  • 16GB RAM minimum
+  • Dedicated NICs for WAN/LAN/MGMT
+  • Hardware TPM support (optional)
+  • Kernel modules loaded for OblivionEdge
+end note
+
+note bottom of networks
+  **Container Networking:**
+  • Isolated bridge networks for security
+  • WireGuard tunnels for inter-container communication
+  • NAT traversal and port forwarding
+  • Traffic shaping and QoS controls
+end note
+
+@enduml
