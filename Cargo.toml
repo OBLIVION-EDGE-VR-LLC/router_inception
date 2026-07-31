@@ -1,0 +1,86 @@
+[package]
+name = "router-n-routers"
+version = "0.1.0"
+edition = "2021"
+authors = ["OBLIVION EDGE LLC <1337_tech@fortressofsolitude.org>"]
+license = "MIT"
+description = "OblivionEdge Geographic Router Labyrinth with Onion Routing"
+homepage = "https://github.com/oblivionedge/router-n-routers"
+repository = "https://github.com/oblivionedge/router-n-routers"
+keywords = ["networking", "vpn", "onion", "routing", "security"]
+categories = ["network-programming", "cryptography"]
+readme = "README.md"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.28", features = ["full"] }
+
+# Cryptography
+ring = "0.16"
+rand = "0.8"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+bincode = "1.3"
+
+# Error handling
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Network utilities
+socket2 = "0.4"
+
+# System integration
+libc = "0.2"
+
+[dev-dependencies]
+# Testing utilities
+tokio-test = "0.4"
+
+[features]
+default = ["full"]
+full = ["wireguard", "geographic", "onion", "monitoring"]
+
+# Feature flags for different components
+wireguard = []
+geographic = []
+onion = []
+monitoring = []
+
+# Development features
+dev = ["tokio/test-util"]
+
+[lib]
+name = "router_n_routers"
+path = "src/lib.rs"
+
+[[bin]]
+name = "onion-client"
+path = "src/bin/onion-client.rs"
+
+[[bin]]
+name = "onion-server"
+path = "src/bin/onion-server.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+opt-level = 0
+debug = true
+overflow-checks = true
+
+[profile.test]
+opt-level = 1
+debug = true
+
+# Patch dependencies for security if needed
+[patch.crates-io]
+
+# Examples will be added later
