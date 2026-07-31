@@ -608,7 +608,7 @@ This project extends the OblivionEdge codebase and follows its licensing terms. 
 
 ---
 
-**Built with OblivionEdge by OBLIVION EDGE LLC**  
+**Built with OblivionEdge by OBLIVION EDGE VULNERABILITY RESEARCH LLC**  
 *"Free the Router. Free the Code."*
 
 For questions and support, contact: 1337_tech@fortressofsolitude.org
