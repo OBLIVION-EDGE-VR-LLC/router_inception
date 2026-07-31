@@ -1,0 +1,11 @@
+.key
+.crt
+.pem
+.der
+.csr
+
+*.key
+*.crt
+*.pem
+*.der
+*.csr
