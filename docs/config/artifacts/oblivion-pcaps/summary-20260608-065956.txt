@@ -1,0 +1,34 @@
+=== OblivionEdge Geographic Routing Test Summary ===
+Test Session: 20260608-065956
+Date: Mon Jun  8 07:00:39 AM CDT 2026
+
+=== Captured Files ===
+-rw-r--r-- 1 bdg bdg  6198 Jun  8 07:00 /tmp/oblivion-pcaps/oblivion-australia-eth0-20260608-065956.pcap
+-rw-r--r-- 1 bdg bdg     0 Jun  8 06:59 /tmp/oblivion-pcaps/oblivion-australia-wg0-20260608-065956.pcap
+-rw-r--r-- 1 bdg bdg  4154 Jun  8 07:00 /tmp/oblivion-pcaps/oblivion-canada-eth0-20260608-065956.pcap
+-rw-r--r-- 1 bdg bdg     0 Jun  8 06:59 /tmp/oblivion-pcaps/oblivion-canada-wg0-20260608-065956.pcap
+-rw-r--r-- 1 bdg bdg  6108 Jun  8 07:00 /tmp/oblivion-pcaps/oblivion-exit-eth0-20260608-065956.pcap
+-rw-r--r-- 1 bdg bdg 11746 Jun  8 07:00 /tmp/oblivion-pcaps/oblivion-primary-eth0-20260608-065956.pcap
+-rw-r--r-- 1 bdg bdg     0 Jun  8 06:59 /tmp/oblivion-pcaps/oblivion-primary-wg0-20260608-065956.pcap
+-rw-r--r-- 1 bdg bdg  4384 Jun  8 07:00 /tmp/oblivion-pcaps/oblivion-russia-eth0-20260608-065956.pcap
+-rw-r--r-- 1 bdg bdg     0 Jun  8 06:59 /tmp/oblivion-pcaps/oblivion-russia-wg0-20260608-065956.pcap
+-rw-r--r-- 1 bdg bdg  4062 Jun  8 07:00 /tmp/oblivion-pcaps/oblivion-taiwan-eth0-20260608-065956.pcap
+-rw-r--r-- 1 bdg bdg     0 Jun  8 06:59 /tmp/oblivion-pcaps/oblivion-taiwan-wg0-20260608-065956.pcap
+
+=== Geographic Routing Topology ===
+Primary (172.20.0.10:51820) → Russia (172.20.0.20:51821) → 
+Canada (172.20.0.30:51822) → Taiwan (172.20.0.40:51823) → 
+Australia (172.20.0.50:51824) → Exit (172.20.0.60:51825) → Internet
+
+=== Analysis Instructions ===
+1. Use Wireshark to open PCAP files:
+   wireshark /tmp/oblivion-pcaps/*.pcap
+
+2. Filter for WireGuard traffic:
+   udp.port >= 51820 and udp.port <= 51825
+
+3. Filter for container networks:
+   ip.addr == 172.20.0.0/16 or ip.addr == 172.21.0.0/16
+
+4. Look for tunneled traffic:
+   Follow the packet flow through each geographic hop

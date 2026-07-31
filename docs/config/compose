@@ -1,0 +1,29 @@
+#!/bin/bash
+# Docker Compose Wrapper with Automatic Host Routing Management
+# Usage: ./compose up -d    (starts containers and configures routing)
+#        ./compose down     (stops containers and restores routing)
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HOOKS_SCRIPT="$SCRIPT_DIR/docker-compose-hooks.sh"
+
+# Run the docker compose command
+docker compose "$@"
+COMPOSE_EXIT_CODE=$?
+
+# Run appropriate hooks based on the command
+case "${1:-}" in
+    "up")
+        if [ $COMPOSE_EXIT_CODE -eq 0 ]; then
+            echo
+            echo "=== Running post-up hooks ==="
+            sudo "$HOOKS_SCRIPT" up
+        fi
+        ;;
+    "down")
+        echo
+        echo "=== Running pre-down hooks ==="
+        sudo "$HOOKS_SCRIPT" down
+        ;;
+esac
+
+exit $COMPOSE_EXIT_CODE

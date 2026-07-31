@@ -1,0 +1,40 @@
+# Generated iptables rules for geographic hop router (Russia)
+*filter
+:INPUT DROP [0:0]
+:FORWARD ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+
+# Allow loopback traffic
+-A INPUT -i lo -j ACCEPT
+
+# Allow established and related connections
+-A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# Allow WireGuard traffic
+-A INPUT -p udp --dport 51821 -j ACCEPT
+
+# Allow traffic from management network
+-A INPUT -s 172.21.0.0/16 -j ACCEPT
+
+# Allow traffic from geo-labyrinth network
+-A INPUT -s 172.20.0.0/16 -j ACCEPT
+
+# Allow WireGuard interface traffic
+-A INPUT -i wg0 -j ACCEPT
+
+# Forward traffic between WireGuard and container networks
+-A FORWARD -i wg0 -o eth0 -j ACCEPT
+-A FORWARD -i eth0 -o wg0 -j ACCEPT
+
+COMMIT
+
+*nat
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+
+# NAT for outgoing traffic
+-A POSTROUTING -o eth0 -j MASQUERADE
+
+COMMIT

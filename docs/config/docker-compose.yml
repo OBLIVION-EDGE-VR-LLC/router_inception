@@ -1,5 +1,3 @@
-version: '3.8'
-
 networks:
   geo-labyrinth:
     driver: bridge
@@ -13,6 +11,15 @@ networks:
       config:
         - subnet: 172.21.0.0/16
           gateway: 172.21.0.1
+  host-bridge:
+    driver: macvlan
+    driver_opts:
+      parent: wlo1
+    ipam:
+      config:
+        - subnet: 192.168.86.0/24
+          gateway: 192.168.86.1
+          ip_range: 192.168.86.240/28
 
 volumes:
   oblivion-logs:
@@ -28,20 +35,28 @@ services:
       dockerfile: Dockerfile.router
     container_name: oblivion-primary
     hostname: primary-router
+    privileged: true
     cap_add:
       - NET_ADMIN
       - SYS_ADMIN
     devices:
       - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.conf.default.rp_filter=2
+      - net.ipv4.conf.all.rp_filter=2
     networks:
       geo-labyrinth:
         ipv4_address: 172.20.0.10
       mgmt-network:
         ipv4_address: 172.21.0.10
     volumes:
-      - ./router_configs/primary:/etc/oblivion:ro
+      - ./router_configs/primary:/etc/oblivion
       - oblivion-logs:/var/log/oblivion
       - tpm-data:/dev/tpm
+      - ./supervisord.conf:/etc/supervisor/conf.d/oblivion.conf:ro
     environment:
       - ROUTER_ROLE=primary
       - GEOGRAPHIC_LOCATION=entry
@@ -51,10 +66,18 @@ services:
       - NEXT_HOP=172.20.0.20
     ports:
       - "51820:51820/udp"  # WireGuard
-      - "8443:8443"        # Admin Interface
+      - "8081:8080"        # Monitoring API (mapped to avoid conflicts)
+      # - "8443:8443"        # Admin Interface (commented out due to iptables conflict)
     depends_on:
       - oblivion-monitor
     restart: unless-stopped
+    # Use the built-in entrypoint from the Dockerfile
+    healthcheck:
+      test: ["CMD", "/usr/bin/oblivion_admin_cli", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # Russia Geographic Hop
   oblivion-russia:
@@ -63,18 +86,26 @@ services:
       dockerfile: Dockerfile.router
     container_name: oblivion-russia
     hostname: russia-hop
+    privileged: true
     cap_add:
       - NET_ADMIN
     devices:
       - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.conf.default.rp_filter=2
+      - net.ipv4.conf.all.rp_filter=2
     networks:
       geo-labyrinth:
         ipv4_address: 172.20.0.20
       mgmt-network:
         ipv4_address: 172.21.0.20
     volumes:
-      - ./router_configs/russia:/etc/oblivion:ro
+      - ./router_configs/russia:/etc/oblivion
       - oblivion-logs:/var/log/oblivion
+      - ./supervisord.conf:/etc/supervisor/conf.d/oblivion.conf:ro
     environment:
       - ROUTER_ROLE=hop
       - GEOGRAPHIC_LOCATION=russia
@@ -87,7 +118,15 @@ services:
       - NEXT_HOP=172.20.0.30
     ports:
       - "51821:51821/udp"
+      - "8082:8080"        # Monitoring API
     restart: unless-stopped
+    # Use the built-in entrypoint from the Dockerfile
+    healthcheck:
+      test: ["CMD", "/usr/bin/oblivion_admin_cli", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # Canada Geographic Hop
   oblivion-canada:
@@ -96,18 +135,26 @@ services:
       dockerfile: Dockerfile.router
     container_name: oblivion-canada
     hostname: canada-hop
+    privileged: true
     cap_add:
       - NET_ADMIN
     devices:
       - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.conf.default.rp_filter=2
+      - net.ipv4.conf.all.rp_filter=2
     networks:
       geo-labyrinth:
         ipv4_address: 172.20.0.30
       mgmt-network:
         ipv4_address: 172.21.0.30
     volumes:
-      - ./router_configs/canada:/etc/oblivion:ro
+      - ./router_configs/canada:/etc/oblivion
       - oblivion-logs:/var/log/oblivion
+      - ./supervisord.conf:/etc/supervisor/conf.d/oblivion.conf:ro
     environment:
       - ROUTER_ROLE=hop
       - GEOGRAPHIC_LOCATION=canada
@@ -120,7 +167,15 @@ services:
       - NEXT_HOP=172.20.0.40
     ports:
       - "51822:51822/udp"
+      - "8083:8080"        # Monitoring API
     restart: unless-stopped
+    # Use the built-in entrypoint from the Dockerfile
+    healthcheck:
+      test: ["CMD", "/usr/bin/oblivion_admin_cli", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # Taiwan Geographic Hop
   oblivion-taiwan:
@@ -129,17 +184,24 @@ services:
       dockerfile: Dockerfile.router
     container_name: oblivion-taiwan
     hostname: taiwan-hop
+    privileged: true
     cap_add:
       - NET_ADMIN
     devices:
       - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.conf.default.rp_filter=2
+      - net.ipv4.conf.all.rp_filter=2
     networks:
       geo-labyrinth:
         ipv4_address: 172.20.0.40
       mgmt-network:
         ipv4_address: 172.21.0.40
     volumes:
-      - ./router_configs/taiwan:/etc/oblivion:ro
+      - ./router_configs/taiwan:/etc/oblivion
       - oblivion-logs:/var/log/oblivion
     environment:
       - ROUTER_ROLE=hop
@@ -153,7 +215,15 @@ services:
       - NEXT_HOP=172.20.0.50
     ports:
       - "51823:51823/udp"
+      - "8084:8080"        # Monitoring API
     restart: unless-stopped
+    # Use the built-in entrypoint from the Dockerfile
+    healthcheck:
+      test: ["CMD", "/usr/bin/oblivion_admin_cli", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # Australia Geographic Hop
   oblivion-australia:
@@ -162,17 +232,24 @@ services:
       dockerfile: Dockerfile.router
     container_name: oblivion-australia
     hostname: australia-hop
+    privileged: true
     cap_add:
       - NET_ADMIN
     devices:
       - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.conf.default.rp_filter=2
+      - net.ipv4.conf.all.rp_filter=2
     networks:
       geo-labyrinth:
         ipv4_address: 172.20.0.50
       mgmt-network:
         ipv4_address: 172.21.0.50
     volumes:
-      - ./router_configs/australia:/etc/oblivion:ro
+      - ./router_configs/australia:/etc/oblivion
       - oblivion-logs:/var/log/oblivion
     environment:
       - ROUTER_ROLE=hop
@@ -184,9 +261,18 @@ services:
       - WIREGUARD_PORT=51824
       - PREV_HOP=172.20.0.40
       - NEXT_HOP=172.20.0.60
+      - FORCE_GATEWAY=172.20.0.60
     ports:
       - "51824:51824/udp"
+      - "8085:8080"        # Monitoring API
     restart: unless-stopped
+    # Use the built-in entrypoint from the Dockerfile
+    healthcheck:
+      test: ["CMD", "/usr/bin/oblivion_admin_cli", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # Exit Router (SOHO Gateway)
   oblivion-exit:
@@ -195,17 +281,30 @@ services:
       dockerfile: Dockerfile.router
     container_name: oblivion-exit
     hostname: exit-router
+    privileged: true
     cap_add:
       - NET_ADMIN
+      - NET_RAW
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     devices:
       - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.conf.default.rp_filter=2
+      - net.ipv4.conf.all.rp_filter=2
     networks:
       geo-labyrinth:
         ipv4_address: 172.20.0.60
       mgmt-network:
         ipv4_address: 172.21.0.60
+      host-bridge:
+        ipv4_address: 192.168.86.240
     volumes:
-      - ./router_configs/exit:/etc/oblivion:ro
+      - ./router_configs/exit:/etc/oblivion
       - oblivion-logs:/var/log/oblivion
     environment:
       - ROUTER_ROLE=exit
@@ -216,11 +315,19 @@ services:
       - NAT_ENABLED=true
       - FIREWALL_ENABLED=true
     ports:
-      - "51825:51825/udp"
-      - "80:80"           # HTTP Redirect
-      - "443:443"         # HTTPS
-      - "53:53/udp"       # DNS
+      - "51830:51825/udp"  # Map host port 51830 to container port 51825
+      - "8181:80"          # HTTP Redirect (mapped to avoid conflicts)
+      - "8444:443"         # HTTPS (mapped to avoid conflicts)
+      - "9053:53/udp"      # DNS (mapped to 9053)
+      - "8086:8080"        # Monitoring API
     restart: unless-stopped
+    # Use the built-in entrypoint from the Dockerfile
+    healthcheck:
+      test: ["CMD", "/usr/bin/oblivion_admin_cli", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   # Monitoring and Management
   oblivion-monitor:
@@ -233,7 +340,7 @@ services:
       mgmt-network:
         ipv4_address: 172.21.0.100
     volumes:
-      - ./router_configs/monitor:/etc/oblivion:ro
+      - ./router_configs/monitor:/etc/oblivion
       - monitoring-data:/var/lib/monitoring
       - oblivion-logs:/var/log/oblivion:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -256,17 +363,24 @@ services:
       dockerfile: Dockerfile.router
     container_name: oblivion-backup
     hostname: backup-router
+    privileged: true
     cap_add:
       - NET_ADMIN
     devices:
       - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.conf.default.rp_filter=2
+      - net.ipv4.conf.all.rp_filter=2
     networks:
       geo-labyrinth:
         ipv4_address: 172.20.0.70
       mgmt-network:
         ipv4_address: 172.21.0.70
     volumes:
-      - ./router_configs/backup:/etc/oblivion:ro
+      - ./router_configs/backup:/etc/oblivion
       - oblivion-logs:/var/log/oblivion
     environment:
       - ROUTER_ROLE=backup
@@ -277,26 +391,3 @@ services:
       - backup
     restart: unless-stopped
 
-# Health checks
-x-healthcheck: &healthcheck
-  healthcheck:
-    test: ["CMD", "/usr/bin/oblivion_admin_cli", "status"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
-    start_period: 60s
-
-# Apply healthcheck to all router services
-services:
-  oblivion-primary:
-    <<: *healthcheck
-  oblivion-russia:
-    <<: *healthcheck
-  oblivion-canada:
-    <<: *healthcheck
-  oblivion-taiwan:
-    <<: *healthcheck
-  oblivion-australia:
-    <<: *healthcheck
-  oblivion-exit:
-    <<: *healthcheck

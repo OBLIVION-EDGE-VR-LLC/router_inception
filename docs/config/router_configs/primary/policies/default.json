@@ -1,0 +1,31 @@
+{
+    "version": "1.0",
+    "policies": [
+        {
+            "name": "allow_authenticated_clients",
+            "type": "access_control",
+            "conditions": {
+                "authentication": "certificate",
+                "certificate_validation": "required",
+                "tpm_attestation": "true"
+            },
+            "actions": {
+                "allow": true,
+                "log": true,
+                "monitor": true
+            }
+        },
+        {
+            "name": "geographic_routing",
+            "type": "routing",
+            "conditions": {
+                "destination": "any"
+            },
+            "actions": {
+                "route_via": "russia_hop",
+                "encrypt": true,
+                "log_traffic": true
+            }
+        }
+    ]
+}

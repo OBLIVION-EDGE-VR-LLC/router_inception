@@ -458,6 +458,168 @@ monitor_traffic() {
     )
 }
 
+# Test geographic routing with traceroute
+test_traceroute() {
+    log_header "Testing Geographic Routing with Traceroute"
+
+    cd "$CONFIG_DIR"
+
+    # Define test targets and expected route
+    local test_targets=("8.8.8.8" "1.1.1.1" "208.67.222.222")
+    local router_ips=("172.20.0.10" "172.20.0.20" "172.20.0.30" "172.20.0.40" "172.20.0.50" "172.20.0.60")
+    local router_names=("primary" "russia" "canada" "taiwan" "australia" "exit")
+
+    echo "Testing traceroute from each geographic hop..."
+    echo
+
+    # Test from each router in the chain
+    for i in "${!router_names[@]}"; do
+        local router="${router_names[$i]}"
+        local router_ip="${router_ips[$i]}"
+
+        log_info "Testing traceroute from $router ($router_ip)..."
+
+        # Test connectivity to external targets
+        for target in "${test_targets[@]}"; do
+            echo "  → Traceroute to $target from $router:"
+
+            if docker compose exec "oblivion-$router" traceroute -n -w 2 -m 10 "$target" 2>/dev/null | head -15; then
+                log_success "Traceroute to $target from $router completed"
+            else
+                # Fallback to ping if traceroute fails
+                if docker compose exec "oblivion-$router" ping -c 3 -W 2 "$target" &>/dev/null; then
+                    log_warning "Traceroute failed but ping works for $target from $router"
+                else
+                    log_error "No connectivity to $target from $router"
+                fi
+            fi
+            echo
+        done
+
+        # Test connectivity to next hop in chain (if not exit router)
+        if [ $i -lt $((${#router_names[@]} - 1)) ]; then
+            local next_router="${router_names[$((i + 1))]}"
+            local next_ip="${router_ips[$((i + 1))]}"
+
+            echo "  → Testing connectivity to next hop ($next_router at $next_ip):"
+            if docker compose exec "oblivion-$router" ping -c 2 -W 1 "$next_ip" &>/dev/null; then
+                log_success "Connectivity to $next_router ($next_ip) OK"
+            else
+                log_warning "Cannot reach next hop $next_router ($next_ip)"
+            fi
+            echo
+        fi
+    done
+
+    # Test end-to-end traceroute through the entire chain
+    log_info "Testing end-to-end routing through geographic labyrinth..."
+    echo "  → End-to-end traceroute from primary to external target:"
+
+    if docker compose exec oblivion-primary traceroute -n -w 3 -m 15 8.8.8.8 2>/dev/null; then
+        log_success "End-to-end traceroute completed successfully"
+    else
+        log_warning "End-to-end traceroute had issues - checking basic connectivity"
+        if docker compose exec oblivion-primary ping -c 5 8.8.8.8 &>/dev/null; then
+            log_success "Basic connectivity through route works (ping successful)"
+        else
+            log_error "No end-to-end connectivity through geographic route"
+        fi
+    fi
+
+    echo
+    log_success "Geographic routing traceroute tests completed"
+}
+
+# Comprehensive network topology test
+test_network_topology() {
+    log_header "Comprehensive Network Topology Test"
+
+    cd "$CONFIG_DIR"
+
+    local routers=("primary" "russia" "canada" "taiwan" "australia" "exit")
+    local router_ips=("172.20.0.10" "172.20.0.20" "172.20.0.30" "172.20.0.40" "172.20.0.50" "172.20.0.60")
+
+    echo "Testing full network topology..."
+    echo
+
+    # Test internal network connectivity
+    log_info "Testing geo-labyrinth network (172.20.0.0/16)..."
+    for i in "${!routers[@]}"; do
+        local src_router="${routers[$i]}"
+        local src_ip="${router_ips[$i]}"
+
+        echo "  From $src_router ($src_ip):"
+
+        # Test connectivity to all other routers
+        for j in "${!routers[@]}"; do
+            if [ $i -ne $j ]; then
+                local dst_router="${routers[$j]}"
+                local dst_ip="${router_ips[$j]}"
+
+                if docker compose exec "oblivion-$src_router" ping -c 1 -W 1 "$dst_ip" &>/dev/null; then
+                    echo "    ✓ Can reach $dst_router ($dst_ip)"
+                else
+                    echo "    ✗ Cannot reach $dst_router ($dst_ip)"
+                fi
+            fi
+        done
+        echo
+    done
+
+    # Test management network connectivity
+    log_info "Testing management network (172.21.0.0/16)..."
+    local mgmt_ips=("172.21.0.10" "172.21.0.20" "172.21.0.30" "172.21.0.40" "172.21.0.50" "172.21.0.60" "172.21.0.100")
+    local mgmt_services=("primary" "russia" "canada" "taiwan" "australia" "exit" "monitor")
+
+    echo "  Management network connectivity matrix:"
+    for i in "${!mgmt_services[@]}"; do
+        local service="${mgmt_services[$i]}"
+        local service_ip="${mgmt_ips[$i]}"
+
+        if [ "$service" = "monitor" ]; then
+            container_name="oblivion-monitor"
+        else
+            container_name="oblivion-$service"
+        fi
+
+        echo "    $service ($service_ip):"
+        monitor_reachable=false
+
+        if docker compose exec "$container_name" ping -c 1 -W 1 "172.21.0.100" &>/dev/null; then
+            echo "      ✓ Can reach monitor (172.21.0.100)"
+            monitor_reachable=true
+        else
+            echo "      ✗ Cannot reach monitor (172.21.0.100)"
+        fi
+    done
+
+    echo
+    log_success "Network topology test completed"
+}
+
+# Enhanced connectivity test with traceroute
+test_connectivity_enhanced() {
+    log_header "Enhanced Geographic Router Connectivity Test"
+
+    cd "$CONFIG_DIR"
+
+    # Run basic connectivity test first
+    test_connectivity
+
+    echo
+
+    # Run traceroute tests
+    test_traceroute
+
+    echo
+
+    # Run network topology tests
+    test_network_topology
+
+    echo
+    log_success "Enhanced connectivity testing completed"
+}
+
 # Show usage information
 show_usage() {
     echo "OblivionEdge Geographic Router Manager"
@@ -473,6 +635,9 @@ show_usage() {
     echo "  status            Show network status"
     echo "  logs <container>  Show logs for specific container"
     echo "  test              Test network connectivity"
+    echo "  test-enhanced     Enhanced connectivity test with traceroute"
+    echo "  traceroute        Test geographic routing paths with traceroute"
+    echo "  topology          Test network topology and internal connectivity"
     echo "  monitor           Monitor real-time traffic"
     echo "  cleanup           Clean up all resources"
     echo "  help              Show this help message"
@@ -481,7 +646,9 @@ show_usage() {
     echo "  $0 init           # Initialize network"
     echo "  $0 start          # Start all containers"
     echo "  $0 logs russia    # Show Russia hop logs"
-    echo "  $0 test           # Test connectivity"
+    echo "  $0 test           # Test basic connectivity"
+    echo "  $0 traceroute     # Test routing paths with traceroute"
+    echo "  $0 test-enhanced  # Complete connectivity and routing test"
     echo
     echo "Geographic Route: Client → Primary → Russia → Canada → Taiwan → Australia → Exit → SOHO"
 }
@@ -515,6 +682,15 @@ main() {
             ;;
         "test")
             test_connectivity
+            ;;
+        "test-enhanced")
+            test_connectivity_enhanced
+            ;;
+        "traceroute")
+            test_traceroute
+            ;;
+        "topology")
+            test_network_topology
             ;;
         "monitor")
             monitor_traffic

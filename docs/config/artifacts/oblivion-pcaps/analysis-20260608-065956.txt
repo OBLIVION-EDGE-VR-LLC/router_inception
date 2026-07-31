@@ -1,0 +1,29 @@
+=== OblivionEdge Geographic Routing PCAP Analysis ===
+Timestamp: Mon Jun  8 07:00:39 AM CDT 2026
+Capture Session: 20260608-065956
+
+=== Packet Counts ===
+oblivion-australia-eth0-20260608-065956.pcap: 49 packets
+oblivion-australia-wg0-20260608-065956.pcap: 0 packets
+oblivion-canada-eth0-20260608-065956.pcap: 41 packets
+oblivion-canada-wg0-20260608-065956.pcap: 0 packets
+oblivion-exit-eth0-20260608-065956.pcap: 48 packets
+oblivion-primary-eth0-20260608-065956.pcap: 75 packets
+oblivion-primary-wg0-20260608-065956.pcap: 0 packets
+oblivion-russia-eth0-20260608-065956.pcap: 44 packets
+oblivion-russia-wg0-20260608-065956.pcap: 0 packets
+oblivion-taiwan-eth0-20260608-065956.pcap: 39 packets
+oblivion-taiwan-wg0-20260608-065956.pcap: 0 packets
+
+=== WireGuard Traffic Analysis ===
+--- oblivion-australia-wg0-20260608-065956.pcap ---
+
+--- oblivion-canada-wg0-20260608-065956.pcap ---
+
+--- oblivion-primary-wg0-20260608-065956.pcap ---
+
+--- oblivion-russia-wg0-20260608-065956.pcap ---
+
+--- oblivion-taiwan-wg0-20260608-065956.pcap ---
+
+=== Inter-Container Traffic Analysis ===

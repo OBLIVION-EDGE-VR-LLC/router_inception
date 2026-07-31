@@ -1,0 +1,223 @@
+networks:
+  geo-labyrinth:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+  mgmt-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+          gateway: 172.21.0.1
+
+volumes:
+  oblivion-logs:
+  router-configs:
+  monitoring-data:
+
+services:
+  # Primary Entry Router
+  oblivion-primary:
+    build:
+      context: ../../OblivionEdge-OblivionEdge_Dev
+      dockerfile: Dockerfile.router
+    container_name: oblivion-primary
+    hostname: primary-router
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.conf.default.rp_filter=2
+      - net.ipv4.conf.all.rp_filter=2
+    networks:
+      geo-labyrinth:
+        ipv4_address: 172.20.0.10
+      mgmt-network:
+        ipv4_address: 172.21.0.10
+    volumes:
+      - ./router_configs/primary:/etc/oblivion
+      - oblivion-logs:/var/log/oblivion
+    environment:
+      - ROUTER_ROLE=primary
+      - GEOGRAPHIC_LOCATION=primary
+    ports:
+      - "8443:8443"
+      - "51820:51820/udp"
+      - "9001:9001"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
+  # Russia Geographic Hop
+  oblivion-russia:
+    build:
+      context: ../../OblivionEdge-OblivionEdge_Dev
+      dockerfile: Dockerfile.router
+    container_name: oblivion-russia
+    hostname: russia-hop
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.conf.default.rp_filter=2
+      - net.ipv4.conf.all.rp_filter=2
+    networks:
+      geo-labyrinth:
+        ipv4_address: 172.20.0.20
+      mgmt-network:
+        ipv4_address: 172.21.0.20
+    volumes:
+      - ./router_configs/russia:/etc/oblivion
+      - oblivion-logs:/var/log/oblivion
+    environment:
+      - ROUTER_ROLE=hop
+      - GEOGRAPHIC_LOCATION=russia
+    ports:
+      - "9002:9001"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
+  # Canada Geographic Hop
+  oblivion-canada:
+    build:
+      context: ../../OblivionEdge-OblivionEdge_Dev
+      dockerfile: Dockerfile.router
+    container_name: oblivion-canada
+    hostname: canada-hop
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.conf.default.rp_filter=2
+      - net.ipv4.conf.all.rp_filter=2
+    networks:
+      geo-labyrinth:
+        ipv4_address: 172.20.0.30
+      mgmt-network:
+        ipv4_address: 172.21.0.30
+    volumes:
+      - ./router_configs/canada:/etc/oblivion
+      - oblivion-logs:/var/log/oblivion
+    environment:
+      - ROUTER_ROLE=hop
+      - GEOGRAPHIC_LOCATION=canada
+    ports:
+      - "9003:9001"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
+  # Taiwan Geographic Hop
+  oblivion-taiwan:
+    build:
+      context: ../../OblivionEdge-OblivionEdge_Dev
+      dockerfile: Dockerfile.router
+    container_name: oblivion-taiwan
+    hostname: taiwan-hop
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.conf.default.rp_filter=2
+      - net.ipv4.conf.all.rp_filter=2
+    networks:
+      geo-labyrinth:
+        ipv4_address: 172.20.0.40
+      mgmt-network:
+        ipv4_address: 172.21.0.40
+    volumes:
+      - ./router_configs/taiwan:/etc/oblivion
+      - oblivion-logs:/var/log/oblivion
+    environment:
+      - ROUTER_ROLE=hop
+      - GEOGRAPHIC_LOCATION=taiwan
+    ports:
+      - "9004:9001"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
+  # Australia Geographic Hop
+  oblivion-australia:
+    build:
+      context: ../../OblivionEdge-OblivionEdge_Dev
+      dockerfile: Dockerfile.router
+    container_name: oblivion-australia
+    hostname: australia-hop
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.conf.default.rp_filter=2
+      - net.ipv4.conf.all.rp_filter=2
+    networks:
+      geo-labyrinth:
+        ipv4_address: 172.20.0.50
+      mgmt-network:
+        ipv4_address: 172.21.0.50
+    volumes:
+      - ./router_configs/australia:/etc/oblivion
+      - oblivion-logs:/var/log/oblivion
+    environment:
+      - ROUTER_ROLE=hop
+      - GEOGRAPHIC_LOCATION=australia
+    ports:
+      - "9005:9001"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+
+  # Exit Router (SOHO Gateway)
+  oblivion-exit:
+    build:
+      context: ../../OblivionEdge-OblivionEdge_Dev
+      dockerfile: Dockerfile.router
+    container_name: oblivion-exit
+    hostname: exit-router
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    networks:
+      geo-labyrinth:
+        ipv4_address: 172.20.0.60
+    volumes:
+      - ./router_configs/exit:/etc/oblivion
+      - oblivion-logs:/var/log/oblivion
+    environment:
+      - ROUTER_ROLE=exit
+      - GEOGRAPHIC_LOCATION=exit
+    ports:
+      - "9006:9001"

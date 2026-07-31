@@ -1,0 +1,33 @@
+# Primary Router Firewall Rules
+
+# Default policies
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT ACCEPT
+
+# Allow loopback
+iptables -A INPUT -i lo -j ACCEPT
+
+# Allow established and related connections
+iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -A FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+
+# Allow SSH for management
+iptables -A INPUT -p tcp --dport 22 -j ACCEPT
+
+# Allow WireGuard
+iptables -A INPUT -p udp --dport 51820 -j ACCEPT
+
+# Allow admin interface
+iptables -A INPUT -p tcp --dport 8443 -j ACCEPT
+
+# Allow forwarding between WireGuard interfaces
+iptables -A FORWARD -i wg0 -o eth0 -j ACCEPT
+iptables -A FORWARD -i eth0 -o wg0 -j ACCEPT
+
+# NAT for outgoing traffic
+iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+
+# Drop everything else
+iptables -A INPUT -j DROP
+iptables -A FORWARD -j DROP

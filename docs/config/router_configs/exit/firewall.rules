@@ -1,0 +1,62 @@
+# Generated iptables rules for exit router
+*filter
+:INPUT DROP [0:0]
+:FORWARD DROP [0:0]
+:OUTPUT ACCEPT [0:0]
+
+# Allow loopback traffic
+-A INPUT -i lo -j ACCEPT
+
+# Allow established and related connections
+-A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+-A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+# Allow SSH for management
+-A INPUT -p tcp --dport 22 -j ACCEPT
+
+# Allow WireGuard traffic
+-A INPUT -p udp --dport 51825 -j ACCEPT
+
+# Allow traffic from management network
+-A INPUT -s 172.21.0.0/16 -j ACCEPT
+
+# Allow traffic from geo-labyrinth network
+-A INPUT -s 172.20.0.0/16 -j ACCEPT
+
+# Allow WireGuard interface traffic
+-A INPUT -i wg0 -j ACCEPT
+
+# SOHO Network forwarding rules
+-A FORWARD -s 192.168.1.0/24 -o wg0 -j ACCEPT
+-A FORWARD -i wg0 -d 192.168.1.0/24 -j ACCEPT
+
+# HTTP/HTTPS services
+-A INPUT -p tcp --dport 80 -j ACCEPT
+-A INPUT -p tcp --dport 443 -j ACCEPT
+
+# DNS service
+-A INPUT -p udp --dport 53 -j ACCEPT
+-A INPUT -p tcp --dport 53 -j ACCEPT
+
+# DHCP service
+-A INPUT -p udp --dport 67 -j ACCEPT
+
+# Forward traffic between WireGuard and container networks
+-A FORWARD -i wg0 -o eth0 -j ACCEPT
+-A FORWARD -i eth0 -o wg0 -j ACCEPT
+
+COMMIT
+
+*nat
+:PREROUTING ACCEPT [0:0]
+:INPUT ACCEPT [0:0]
+:OUTPUT ACCEPT [0:0]
+:POSTROUTING ACCEPT [0:0]
+
+# NAT for SOHO network
+-A POSTROUTING -s 192.168.1.0/24 -o wg0 -j MASQUERADE
+
+# NAT for outgoing traffic from containers
+-A POSTROUTING -s 172.20.0.0/16 -o eth0 -j MASQUERADE
+
+COMMIT
